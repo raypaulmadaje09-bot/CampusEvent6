@@ -35,7 +35,7 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-/* Test DB */
+/* DB TEST */
 pool.getConnection()
   .then(conn => {
     console.log('✅ Database connected successfully');
@@ -46,7 +46,7 @@ pool.getConnection()
   });
 
 /* =========================
-   HEALTH CHECK
+   API ROUTES
 ========================= */
 app.get('/api/health', (req, res) => {
   res.json({
@@ -94,7 +94,7 @@ app.put('/api/events/:id', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    await pool.query('UPDATE events SET status = ? WHERE id = ?', [status, id]);
+    await pool.query('UPDATE events SET status=? WHERE id=?', [status, id]);
 
     res.json({ success: true });
   } catch (err) {
@@ -104,7 +104,7 @@ app.put('/api/events/:id', async (req, res) => {
 
 app.delete('/api/events/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM events WHERE id = ?', [req.params.id]);
+    await pool.query('DELETE FROM events WHERE id=?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -168,7 +168,9 @@ app.delete('/api/users/:id', async (req, res) => {
 ========================= */
 app.get('/api/feedback', async (req, res) => {
   try {
-    const [messages] = await pool.query('SELECT * FROM feedback ORDER BY timestamp DESC');
+    const [messages] = await pool.query(
+      'SELECT * FROM feedback ORDER BY timestamp DESC'
+    );
 
     for (const msg of messages) {
       const [replies] = await pool.query(
@@ -222,7 +224,9 @@ app.post('/api/feedback/:id/reply', async (req, res) => {
 ========================= */
 app.get('/api/audit', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM audit_logs ORDER BY timestamp DESC');
+    const [rows] = await pool.query(
+      'SELECT * FROM audit_logs ORDER BY timestamp DESC'
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -245,13 +249,16 @@ app.post('/api/audit', async (req, res) => {
 });
 
 /* =========================
-   FRONTEND (SAFE CATCH-ALL FIX)
+   API 404 HANDLER (SAFE)
 ========================= */
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) {
-    return res.status(404).json({ error: 'API endpoint not found' });
-  }
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found' });
+});
 
+/* =========================
+   FRONTEND CATCH-ALL (FIXED)
+========================= */
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
